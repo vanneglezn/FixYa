@@ -52,3 +52,9 @@ class SolicitudResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SolicitudEstadoUpdate(BaseModel):
+    estado_trabajo: str
+    usuario_rut: str
+    motivo: str

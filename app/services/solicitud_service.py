@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 from app.models.solicitud import Solicitud
 from app.schemas.solicitud_schema import SolicitudCreate, SolicitudUpdate
+from app.models.historial_solicitud import HistorialSolicitud
+from datetime import datetime
 
 def crear_solicitud(db: Session, data: SolicitudCreate):
     nueva = Solicitud(
@@ -53,4 +55,42 @@ def eliminar_solicitud(db: Session, id_solicitud: int):
     solicitud.solicitud_activa = False
     db.commit()
     db.refresh(solicitud)
+    return solicitud
+
+def cambiar_estado_solicitud(db: Session, id_solicitud: int, data):
+    solicitud = obtener_solicitud(db, id_solicitud)
+
+    if not solicitud:
+        return None
+
+    estados_validos = [
+        "INICIADO",
+        "ASIGNADO",
+        "EN_EJECUCION",
+        "FINALIZADO",
+        "CANCELADO"
+    ]
+
+    if data.estado_trabajo not in estados_validos:
+        return "ESTADO_INVALIDO"
+
+    solicitud.estado_trabajo = data.estado_trabajo
+
+    if data.estado_trabajo == "EN_EJECUCION":
+        solicitud.fecha_inicio = datetime.now()
+
+    if data.estado_trabajo == "FINALIZADO":
+        solicitud.fecha_real = datetime.now()
+
+    historial = HistorialSolicitud(
+        motivo=data.motivo,
+        estado=data.estado_trabajo,
+        solicitud_id_solicitud=id_solicitud,
+        usuario_rut=data.usuario_rut
+    )
+
+    db.add(historial)
+    db.commit()
+    db.refresh(solicitud)
+
     return solicitud

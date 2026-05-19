@@ -12,6 +12,8 @@ from app.routers.usuario_router import router as usuario_router
 from app.routers.tecnico_router import router as tecnico_router
 from app.routers.solicitud_router import router as solicitud_router
 from app.routers.cotizacion_router import router as cotizacion_router
+from app.models import historial_solicitud
+from app.routers.historial_solicitud_router import router as historial_solicitud_router
 
 app = FastAPI(
     title="FixYa API",
@@ -24,7 +26,7 @@ app.include_router(usuario_router)
 app.include_router(tecnico_router)
 app.include_router(solicitud_router)
 app.include_router(cotizacion_router)
-
+app.include_router(historial_solicitud_router)
 @app.get("/")
 def root():
 
