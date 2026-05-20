@@ -3,6 +3,15 @@ from typing import Optional
 from datetime import datetime
 from decimal import Decimal
 
+
+class SolicitudFinalizar(BaseModel):
+    costo_final: Decimal
+
+
+class SolicitudEstadoUpdate(BaseModel):
+    estado_trabajo: str
+
+
 class SolicitudCreate(BaseModel):
     usuario_rut: str
     servicio_id_servicio: int
@@ -14,6 +23,7 @@ class SolicitudCreate(BaseModel):
     tipo_problema: str
     foto_problema: Optional[str] = None
     ubicacion_problema_referencia: str
+
 
 class SolicitudUpdate(BaseModel):
     tecnico_usuario_rut: Optional[str] = None
@@ -32,29 +42,25 @@ class SolicitudUpdate(BaseModel):
     ubicacion_problema_referencia: Optional[str] = None
     fecha_real: Optional[datetime] = None
 
+
 class SolicitudResponse(BaseModel):
     id_solicitud: int
     usuario_rut: str
     servicio_id_servicio: int
-    tecnico_usuario_rut: Optional[str]
+    tecnico_usuario_rut: Optional[str] = None
     comuna_id_comuna: int
     titulo_solicitud: str
     descripcion_problema: str
     urgencia: str
     direccion: str
-    fecha_creacion: Optional[datetime]
+    fecha_creacion: datetime
     solicitud_activa: bool
     estado_trabajo: str
     tipo_problema: str
-    foto_problema: Optional[str]
+    foto_problema: Optional[str] = None
     ubicacion_problema_referencia: str
-    costo_final: Optional[Decimal]
+    costo_final: Optional[Decimal] = None
+    fecha_real: Optional[datetime] = None
 
     class Config:
         from_attributes = True
-
-
-class SolicitudEstadoUpdate(BaseModel):
-    estado_trabajo: str
-    usuario_rut: str
-    motivo: str

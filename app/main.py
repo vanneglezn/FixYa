@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 
@@ -27,6 +28,15 @@ from app.routers import tecnico_comuna_router
 app = FastAPI(
     title="FixYa API",
     version="1.0.0"
+)
+
+# CORS PARA REACT
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # en producción se cambia
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -59,10 +69,10 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-
 Base.metadata.create_all(bind=engine)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 app.include_router(usuario_router)
 app.include_router(tecnico_router)
 app.include_router(solicitud_router)
@@ -76,6 +86,7 @@ app.include_router(comuna_router.router)
 app.include_router(servicio_router.router)
 app.include_router(tecnico_servicio_router.router)
 app.include_router(tecnico_comuna_router.router)
+
 
 @app.get("/")
 def root():

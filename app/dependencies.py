@@ -62,3 +62,22 @@ def solo_cliente(current_user: dict = Depends(get_current_user)):
         )
 
     return current_user
+
+def requiere_rol(roles_permitidos: list[str]):
+    def validar_rol(usuario_actual: dict = Depends(get_current_user)):
+        tipo_usuario = usuario_actual.get("tipo_usuario")
+
+        if tipo_usuario not in roles_permitidos:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para realizar esta acción"
+            )
+
+        return usuario_actual
+
+    return validar_rol
+
+
+solo_admin = requiere_rol(["ADMIN"])
+solo_tecnico = requiere_rol(["TECNICO"])
+solo_cliente = requiere_rol(["CLIENTE"])

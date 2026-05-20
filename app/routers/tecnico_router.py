@@ -5,7 +5,10 @@ from sqlalchemy import func
 from app.models.resena import Resena
 from app.models.solicitud import Solicitud
 from sqlalchemy import desc
-
+from app.models.tecnico import Tecnico
+from app.models.tecnico_comuna import TecnicoComuna
+from app.models.comuna import Comuna
+from app.models.tecnico_servicio import TecnicoServicio
 
 from app.database import get_db
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate, TecnicoResponse
@@ -30,6 +33,26 @@ def crear_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
 def listar_tecnicos(db: Session = Depends(get_db)):
     return tecnico_service.listar_tecnicos(db)
 
+
+@router.get("/buscar")
+def buscar_tecnicos_por_servicio_comuna(
+    servicio_id: int,
+    comuna_id: int,
+    db: Session = Depends(get_db)
+):
+    tecnicos = db.query(Tecnico).join(
+        TecnicoServicio,
+        Tecnico.usuario_rut == TecnicoServicio.tecnico_usuario_rut
+    ).join(
+        TecnicoComuna,
+        Tecnico.usuario_rut == TecnicoComuna.tecnico_usuario_rut
+    ).filter(
+        TecnicoServicio.servicio_id_servicio == servicio_id,
+        TecnicoComuna.comuna_id_comuna == comuna_id,
+        Tecnico.tecnico_verificado == True
+    ).all()
+
+    return tecnicos
 
 @router.get("/{rut}", response_model=TecnicoResponse)
 def obtener_tecnico(rut: str, db: Session = Depends(get_db)):
@@ -115,3 +138,126 @@ def obtener_top_tecnicos(
         }
         for r in resultados
     ]
+@router.get("/{rut}/perfil")
+def obtener_perfil_tecnico(
+    rut: str,
+    db: Session = Depends(get_db)
+):
+    tecnico = db.query(Tecnico).filter(
+        Tecnico.usuario_rut == rut
+    ).first()
+
+    if not tecnico:
+        raise HTTPException(
+            status_code=404,
+            detail="Técnico no encontrado"
+        )
+
+    promedio = db.query(
+        func.avg(Resena.calificacion)
+    ).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Resena.resena_activa == "S"
+    ).scalar()
+
+    total = db.query(Resena).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Resena.resena_activa == "S"
+    ).count()
+
+    return {
+        "usuario_rut": tecnico.usuario_rut,
+        "descripcion_perfil": tecnico.descripcion_perfil,
+        "experiencia_anios": tecnico.experiencia_anios,
+        "nivel_tecnico": tecnico.nivel_tecnico,
+        "tecnico_verificado": tecnico.tecnico_verificado,
+        "promedio_calificacion": round(float(promedio), 1) if promedio else 0,
+        "total_resenas": total
+    }
+@router.post("/{rut}/comunas/{id_comuna}")
+def asignar_comuna_tecnico(
+    rut: str,
+    id_comuna: int,
+    db: Session = Depends(get_db)
+):
+    tecnico = db.query(Tecnico).filter(
+        Tecnico.usuario_rut == rut
+    ).first()
+
+    if not tecnico:
+        raise HTTPException(status_code=404, detail="Técnico no encontrado")
+
+    comuna = db.query(Comuna).filter(
+        Comuna.id_comuna == id_comuna
+    ).first()
+
+    if not comuna:
+        raise HTTPException(status_code=404, detail="Comuna no encontrada")
+
+    existe = db.query(TecnicoComuna).filter(
+        TecnicoComuna.tecnico_usuario_rut == rut,
+        TecnicoComuna.comuna_id_comuna == id_comuna
+    ).first()
+
+    if existe:
+        raise HTTPException(status_code=400, detail="El técnico ya atiende esta comuna")
+
+    nueva = TecnicoComuna(
+        tecnico_usuario_rut=rut,
+        comuna_id_comuna=id_comuna
+    )
+
+    db.add(nueva)
+    db.commit()
+    db.refresh(nueva)
+
+    return {
+        "mensaje": "Comuna asignada correctamente",
+        "tecnico_usuario_rut": rut,
+        "comuna_id_comuna": id_comuna
+    }  
+@router.get("/{rut}/comunas")
+def listar_comunas_tecnico(
+    rut: str,
+    db: Session = Depends(get_db)
+):
+    comunas = db.query(Comuna).join(
+        TecnicoComuna,
+        Comuna.id_comuna == TecnicoComuna.comuna_id_comuna
+    ).filter(
+        TecnicoComuna.tecnico_usuario_rut == rut
+    ).all()
+
+    return comunas
+
+@router.delete("/{rut}/comunas/{id_comuna}")
+def eliminar_comuna_tecnico(
+    rut: str,
+    id_comuna: int,
+    db: Session = Depends(get_db)
+):
+    tecnico_comuna = db.query(TecnicoComuna).filter(
+        TecnicoComuna.tecnico_usuario_rut == rut,
+        TecnicoComuna.comuna_id_comuna == id_comuna
+    ).first()
+
+    if not tecnico_comuna:
+        raise HTTPException(
+            status_code=404,
+            detail="Comuna no asignada al técnico"
+        )
+
+    db.delete(tecnico_comuna)
+    db.commit()
+
+    return {
+        "mensaje": "Comuna eliminada del técnico correctamente",
+        "tecnico_usuario_rut": rut,
+        "comuna_id_comuna": id_comuna
+    }
