@@ -20,6 +20,9 @@ from app.routers import admin_router
 from app.routers import region_router
 from app.routers import comuna_router
 from app.routers import servicio_router
+from app.routers import tecnico_servicio_router
+from app.routers import tecnico_comuna_router
+
 
 app = FastAPI(
     title="FixYa API",
@@ -71,6 +74,9 @@ app.include_router(admin_router.router)
 app.include_router(region_router.router)
 app.include_router(comuna_router.router)
 app.include_router(servicio_router.router)
+app.include_router(tecnico_servicio_router.router)
+app.include_router(tecnico_comuna_router.router)
+
 @app.get("/")
 def root():
     return {
