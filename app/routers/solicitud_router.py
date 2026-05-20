@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
 
 from app.database import get_db
 from app.services import solicitud_service
+
+from app.models.solicitud import Solicitud
+from app.models.historial_solicitud import HistorialSolicitud
 
 from app.schemas.solicitud_schema import (
     SolicitudCreate,
@@ -12,12 +16,13 @@ from app.schemas.solicitud_schema import (
     SolicitudEstadoUpdate
 )
 
+
 router = APIRouter(
     prefix="/solicitudes",
     tags=["Solicitudes"]
 )
 
-# CREAR SOLICITUD
+
 @router.post("/", response_model=SolicitudResponse)
 def crear_solicitud(
     solicitud: SolicitudCreate,
@@ -26,13 +31,11 @@ def crear_solicitud(
     return solicitud_service.crear_solicitud(db, solicitud)
 
 
-# LISTAR SOLICITUDES
 @router.get("/", response_model=List[SolicitudResponse])
 def listar_solicitudes(db: Session = Depends(get_db)):
     return solicitud_service.listar_solicitudes(db)
 
 
-# CAMBIAR ESTADO SOLICITUD
 @router.put("/{id_solicitud}/estado", response_model=SolicitudResponse)
 def cambiar_estado_solicitud(
     id_solicitud: int,
@@ -46,41 +49,27 @@ def cambiar_estado_solicitud(
     )
 
     if solicitud is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Solicitud no encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
     if solicitud == "ESTADO_INVALIDO":
-        raise HTTPException(
-            status_code=400,
-            detail="Estado de trabajo inválido"
-        )
+        raise HTTPException(status_code=400, detail="Estado de trabajo inválido")
 
     return solicitud
 
 
-# OBTENER SOLICITUD POR ID
 @router.get("/{id_solicitud}", response_model=SolicitudResponse)
 def obtener_solicitud(
     id_solicitud: int,
     db: Session = Depends(get_db)
 ):
-    solicitud = solicitud_service.obtener_solicitud(
-        db,
-        id_solicitud
-    )
+    solicitud = solicitud_service.obtener_solicitud(db, id_solicitud)
 
     if not solicitud:
-        raise HTTPException(
-            status_code=404,
-            detail="Solicitud no encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
     return solicitud
 
 
-# ACTUALIZAR SOLICITUD
 @router.put("/{id_solicitud}", response_model=SolicitudResponse)
 def actualizar_solicitud(
     id_solicitud: int,
@@ -94,15 +83,11 @@ def actualizar_solicitud(
     )
 
     if not solicitud_actualizada:
-        raise HTTPException(
-            status_code=404,
-            detail="Solicitud no encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
     return solicitud_actualizada
 
 
-# ELIMINAR SOLICITUD
 @router.delete("/{id_solicitud}")
 def eliminar_solicitud(
     id_solicitud: int,
@@ -114,11 +99,78 @@ def eliminar_solicitud(
     )
 
     if not solicitud_eliminada:
-        raise HTTPException(
-            status_code=404,
-            detail="Solicitud no encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    return {"mensaje": "Solicitud desactivada correctamente"}
+
+
+@router.put("/{id_solicitud}/finalizar")
+def finalizar_solicitud(
+    id_solicitud: int,
+    db: Session = Depends(get_db)
+):
+    solicitud = db.query(Solicitud).filter(
+        Solicitud.id_solicitud == id_solicitud
+    ).first()
+
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    solicitud.estado_trabajo = "FINALIZADO"
+    solicitud.fecha_real = datetime.utcnow()
+
+    historial = HistorialSolicitud(
+        solicitud_id_solicitud=solicitud.id_solicitud,
+        usuario_rut=solicitud.usuario_rut,
+        estado="FINALIZADO",
+        motivo="Solicitud finalizada"
+    )
+
+    db.add(historial)
+    db.commit()
+    db.refresh(solicitud)
 
     return {
-        "mensaje": "Solicitud desactivada correctamente"
+        "mensaje": "Solicitud finalizada correctamente",
+        "id_solicitud": solicitud.id_solicitud,
+        "estado": solicitud.estado_trabajo
+    }
+
+
+@router.put("/{id_solicitud}/cancelar")
+def cancelar_solicitud(
+    id_solicitud: int,
+    db: Session = Depends(get_db)
+):
+    solicitud = db.query(Solicitud).filter(
+        Solicitud.id_solicitud == id_solicitud
+    ).first()
+
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    if solicitud.estado_trabajo == "FINALIZADO":
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede cancelar una solicitud finalizada"
+        )
+
+    solicitud.estado_trabajo = "CANCELADO"
+    solicitud.solicitud_activa = False
+
+    historial = HistorialSolicitud(
+        solicitud_id_solicitud=solicitud.id_solicitud,
+        usuario_rut=solicitud.usuario_rut,
+        estado="CANCELADO",
+        motivo="Solicitud cancelada"
+    )
+
+    db.add(historial)
+    db.commit()
+    db.refresh(solicitud)
+
+    return {
+        "mensaje": "Solicitud cancelada correctamente",
+        "id_solicitud": solicitud.id_solicitud,
+        "estado": solicitud.estado_trabajo
     }

@@ -1,22 +1,64 @@
-from app.database import SessionLocal
-from sqlalchemy.orm import Session
-from fastapi import Depends
+from app.database import get_db
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 
-# ---------------------------------------------------
-# DB SESSION
-# ---------------------------------------------------
-def get_db():
-    db = SessionLocal()
+from app.auth import SECRET_KEY, ALGORITHM
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
-        yield db
-    finally:
-        db.close()
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        correo = payload.get("sub")
+        tipo_usuario = payload.get("tipo_usuario")
+
+        if correo is None or tipo_usuario is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token inválido"
+            )
+
+        return {
+            "correo": correo,
+            "tipo_usuario": tipo_usuario
+        }
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado"
+        )
 
 
-# ---------------------------------------------------
-# AUTH PLACEHOLDER (por ahora simple)
-# ---------------------------------------------------
-def get_current_user():
-    return {
-        "mensaje": "usuario autenticado (placeholder)"
-    }
+def solo_admin(current_user: dict = Depends(get_current_user)):
+    if current_user["tipo_usuario"] != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo administradores pueden realizar esta acción"
+        )
+
+    return current_user
+
+
+def solo_tecnico(current_user: dict = Depends(get_current_user)):
+    if current_user["tipo_usuario"] != "TECNICO":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo técnicos pueden realizar esta acción"
+        )
+
+    return current_user
+
+
+def solo_cliente(current_user: dict = Depends(get_current_user)):
+    if current_user["tipo_usuario"] != "CLIENTE":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo clientes pueden realizar esta acción"
+        )
+
+    return current_user
