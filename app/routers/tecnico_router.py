@@ -261,3 +261,58 @@ def eliminar_comuna_tecnico(
         "tecnico_usuario_rut": rut,
         "comuna_id_comuna": id_comuna
     }
+    
+@router.get("/{rut}/dashboard")
+def obtener_dashboard_tecnico(
+    rut: str,
+    db: Session = Depends(get_db)
+):
+    solicitudes_asignadas = db.query(Solicitud).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Solicitud.estado_trabajo == "ASIGNADO"
+    ).count()
+
+    solicitudes_en_proceso = db.query(Solicitud).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Solicitud.estado_trabajo == "EN_PROCESO"
+    ).count()
+
+    solicitudes_finalizadas = db.query(Solicitud).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Solicitud.estado_trabajo == "FINALIZADO"
+    ).count()
+
+    ingresos_totales = db.query(
+        func.sum(Solicitud.costo_final)
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Solicitud.estado_trabajo == "FINALIZADO"
+    ).scalar()
+
+    promedio = db.query(
+        func.avg(Resena.calificacion)
+    ).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Resena.resena_activa == "S"
+    ).scalar()
+
+    total_resenas = db.query(Resena).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Resena.resena_activa == "S"
+    ).count()
+
+    return {
+        "tecnico_usuario_rut": rut,
+        "solicitudes_asignadas": solicitudes_asignadas,
+        "solicitudes_en_proceso": solicitudes_en_proceso,
+        "solicitudes_finalizadas": solicitudes_finalizadas,
+        "ingresos_totales": float(ingresos_totales) if ingresos_totales else 0,
+        "promedio_calificacion": round(float(promedio), 1) if promedio else 0,
+        "total_resenas": total_resenas
+    }

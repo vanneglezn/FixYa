@@ -8,6 +8,13 @@ from app.security import hash_password, verify_password
 from app.auth import crear_token
 from app.schemas.usuario_schema import UsuarioCreate
 
+from app.dependencies import get_current_user
+from app.models.usuario import Usuario
+
+from sqlalchemy import func
+from app.models.solicitud import Solicitud
+from app.models.resena import Resena
+
 router = APIRouter(
     prefix="/usuarios",
     tags=["Usuarios"]
@@ -133,4 +140,66 @@ def perfil(
         "correo": usuario.correo,
         "telefono": usuario.telefono,
         "tipo_usuario": usuario.tipo_usuario
+    }
+    
+@router.get("/me")
+def obtener_usuario_actual(
+    db: Session = Depends(get_db),
+    usuario_actual: dict = Depends(get_current_user)
+):
+    usuario = db.query(Usuario).filter(
+        Usuario.correo == usuario_actual["correo"]
+    ).first()
+
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    return {
+        "rut": usuario.rut,
+        "nombre_completo": usuario.nombre_completo,
+        "correo": usuario.correo,
+        "telefono": usuario.telefono,
+        "tipo_usuario": usuario.tipo_usuario.value,
+        "comuna_id_comuna": usuario.comuna_id_comuna,
+        "estado_usuario": usuario.estado_usuario
+    }
+    
+@router.get("/{rut}/dashboard")
+def obtener_dashboard_cliente(
+    rut: str,
+    db: Session = Depends(get_db)
+):
+    solicitudes_activas = db.query(Solicitud).filter(
+        Solicitud.usuario_rut == rut,
+        Solicitud.solicitud_activa == True
+    ).count()
+
+    solicitudes_finalizadas = db.query(Solicitud).filter(
+        Solicitud.usuario_rut == rut,
+        Solicitud.estado_trabajo == "FINALIZADO"
+    ).count()
+
+    solicitudes_canceladas = db.query(Solicitud).filter(
+        Solicitud.usuario_rut == rut,
+        Solicitud.estado_trabajo == "CANCELADO"
+    ).count()
+
+    total_gastado = db.query(
+        func.sum(Solicitud.costo_final)
+    ).filter(
+        Solicitud.usuario_rut == rut,
+        Solicitud.estado_trabajo == "FINALIZADO"
+    ).scalar()
+
+    total_resenas = db.query(Resena).filter(
+        Resena.usuario_rut == rut
+    ).count()
+
+    return {
+        "usuario_rut": rut,
+        "solicitudes_activas": solicitudes_activas,
+        "solicitudes_finalizadas": solicitudes_finalizadas,
+        "solicitudes_canceladas": solicitudes_canceladas,
+        "total_gastado": float(total_gastado) if total_gastado else 0,
+        "total_resenas": total_resenas
     }
