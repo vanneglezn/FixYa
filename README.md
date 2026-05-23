@@ -1,20 +1,25 @@
+````md
 # FixYa Backend
 
-Backend del proyecto FixYa desarrollado con FastAPI y PostgreSQL.
+Backend del proyecto **FixYa** desarrollado con **FastAPI** y **PostgreSQL**.
 
-## Tecnologías utilizadas
+---
+
+# Tecnologías utilizadas
 
 - Python
 - FastAPI
 - PostgreSQL
 - SQLAlchemy
 - Pydantic
-- JWT
+- JWT Authentication
+- Docker
+- Docker Compose
 - ReportLab
 
 ---
 
-# Instalación
+# Instalación del proyecto
 
 ## 1. Clonar repositorio
 
@@ -27,7 +32,7 @@ git clone https://github.com/vanneglezn/FixYa.git
 ## 2. Entrar al proyecto
 
 ```bash
-cd backend
+cd FixYa/backend
 ```
 
 ---
@@ -48,6 +53,12 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
+### Linux / Mac
+
+```bash
+source venv/bin/activate
+```
+
 ---
 
 ## 5. Instalar dependencias
@@ -58,7 +69,7 @@ pip install -r requirements.txt
 
 ---
 
-# Configurar base de datos
+# Configuración de variables de entorno
 
 Crear archivo `.env`
 
@@ -67,11 +78,13 @@ Ejemplo:
 ```env
 DATABASE_URL=postgresql://postgres:1234@localhost/fixya
 SECRET_KEY=clave_secreta
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
 ---
 
-# Ejecutar proyecto
+# Ejecutar proyecto localmente
 
 ```bash
 uvicorn app.main:app --reload
@@ -79,22 +92,77 @@ uvicorn app.main:app --reload
 
 ---
 
-# Swagger
+# Ejecutar proyecto con Docker
 
-Documentación disponible en:
+## Levantar contenedores
+
+```bash
+docker compose up --build
+```
+
+---
+
+## Detener contenedores
+
+```bash
+docker compose down
+```
+
+---
+
+# Contenedores utilizados
+
+- `fixya_backend`
+  - API FastAPI
+
+- `fixya_postgres`
+  - Base de datos PostgreSQL
+
+---
+
+# Documentación Swagger
+
+Disponible en:
 
 ```txt
 http://127.0.0.1:8000/docs
 ```
 
+o
+
+```txt
+http://localhost:8000/docs
+```
+
 ---
 
-# Estado actual
+# Funcionalidades implementadas
 
-- Usuarios
-- Técnicos
-- Solicitudes
+- Gestión de usuarios
+- Autenticación JWT
+- Roles de usuario
+  - ADMIN
+  - CLIENTE
+  - TECNICO
+- Gestión de técnicos
+- Marketplace de técnicos
+- Solicitudes de servicios
+- Asignación de técnicos
+- Gestión de estados de solicitudes
+- Dashboard administrador
+- Dashboard técnico
+- Dashboard cliente
 - Cotizaciones
-- Generación PDF
+- Reseñas y ratings
+- Notificaciones
+- Generación de PDF
+- Subida de archivos
 
-Frontend responsive en desarrollo.
+---
+
+# Estado actual del proyecto
+
+Backend funcional y conectado a PostgreSQL.
+
+Frontend responsive en desarrollo con React.
+````
