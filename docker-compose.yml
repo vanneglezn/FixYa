@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16
+    container_name: fixya_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: fixya_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - fixya_postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: fixya_backend
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/fixya_db
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  fixya_postgres_data:
