@@ -1,18 +1,25 @@
-from pydantic import BaseModel
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.sql import func
 
-class HistorialCreate(BaseModel):
-    motivo: str
-    estado: str
-    solicitud_id_solicitud: int
-    usuario_rut: str
+from app.database import Base
 
-class HistorialResponse(BaseModel):
-    fecha_historial: datetime
-    motivo: str
-    estado: str
-    solicitud_id_solicitud: int
-    usuario_rut: str
 
-    class Config:
-        from_attributes = True
+class HistorialSolicitud(Base):
+    __tablename__ = "historial_solicitud"
+
+    id_historial = Column(Integer, primary_key=True, index=True)
+    fecha_historial = Column(DateTime(timezone=True), server_default=func.now())
+    motivo = Column(String, nullable=False)
+    estado = Column(String, nullable=False)
+
+    solicitud_id_solicitud = Column(
+        Integer,
+        ForeignKey("solicitud.id_solicitud"),
+        nullable=False
+    )
+
+    usuario_rut = Column(
+        String,
+        ForeignKey("usuario.rut"),
+        nullable=False
+    )
