@@ -8,13 +8,14 @@ from app.database import engine, Base
 from app.models import usuario, comuna, region
 from app.models import tecnico, tecnico_servicio, tecnico_comuna
 from app.models import solicitud, servicio, cotizacion
-from app.models import historial_solicitud, resena
+from app.models import historial_solicitud, resena, Notificacion
 
 from app.routers.usuario_router import router as usuario_router
 from app.routers.tecnico_router import router as tecnico_router
 from app.routers.solicitud_router import router as solicitud_router
 from app.routers.cotizacion_router import router as cotizacion_router
 from app.routers.historial_solicitud_router import router as historial_solicitud_router
+from app.routers.dashboard_router import router as dashboard_router
 from app.routers import resena_router
 from app.routers import documento_tecnico_router
 from app.routers import admin_router
@@ -23,7 +24,7 @@ from app.routers import comuna_router
 from app.routers import servicio_router
 from app.routers import tecnico_servicio_router
 from app.routers import tecnico_comuna_router
-
+from app.routers import notificacion_router
 
 app = FastAPI(
     title="FixYa API",
@@ -86,6 +87,8 @@ app.include_router(comuna_router.router)
 app.include_router(servicio_router.router)
 app.include_router(tecnico_servicio_router.router)
 app.include_router(tecnico_comuna_router.router)
+app.include_router(dashboard_router)
+app.include_router(notificacion_router.router)
 
 
 @app.get("/")
