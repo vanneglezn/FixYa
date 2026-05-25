@@ -17,7 +17,7 @@ INSERT INTO servicio (
   id_servicio,
   nombre_servicio,
   descripcion_servicio,
-  servicio_activo
+  estado_servicio
 )
 VALUES
 (1, 'Electricidad', 'Servicios eléctricos', true),
@@ -27,7 +27,6 @@ VALUES
 ON CONFLICT (id_servicio) DO NOTHING;
 
 -- USUARIO ADMIN
--- Contraseña real: admin123
 INSERT INTO usuario (
   rut,
   nombre_completo,
@@ -59,7 +58,6 @@ ON CONFLICT (rut) DO UPDATE SET
   estado_usuario = EXCLUDED.estado_usuario;
 
 -- USUARIO CLIENTE
--- Contraseña real: cliente123
 INSERT INTO usuario (
   rut,
   nombre_completo,
@@ -91,7 +89,6 @@ ON CONFLICT (rut) DO UPDATE SET
   estado_usuario = EXCLUDED.estado_usuario;
 
 -- USUARIO TÉCNICO
--- Contraseña real: tecnico123
 INSERT INTO usuario (
   rut,
   nombre_completo,
