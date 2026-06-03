@@ -7,7 +7,7 @@ from app.models.solicitud import Solicitud
 from app.models.usuario import Usuario
 from app.schemas.resena_schema import ResenaCreate, ResenaResponse
 from app.dependencies import get_current_user
-from app.services.resena_service import preparar_estado_resena
+from app.services.resena_service import generar_resumen_reputacion, preparar_estado_resena
 from app.schemas.resena_schema import ResenaCreate, ResenaResponse, ResolverReporteResena
 from datetime import datetime
 
@@ -137,3 +137,19 @@ def listar_resenas_por_tecnico(
         Solicitud.tecnico_usuario_rut == rut_tecnico,
         Resena.resena_activa == "S"
     ).all()
+
+
+@router.get("/tecnico/{rut_tecnico}/resumen")
+def obtener_resumen_reputacion_tecnico(
+    rut_tecnico: str,
+    db: Session = Depends(get_db)
+):
+    resenas = db.query(Resena).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut_tecnico,
+        Resena.resena_activa == "S"
+    ).all()
+
+    return generar_resumen_reputacion(resenas)

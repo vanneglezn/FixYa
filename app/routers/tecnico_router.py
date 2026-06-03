@@ -15,6 +15,7 @@ from app.models.usuario import Usuario
 from app.database import get_db
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate, TecnicoResponse
 from app.services import tecnico_service
+from app.services.resena_service import generar_resumen_reputacion
 
 router = APIRouter(
     prefix="/tecnicos",
@@ -102,6 +103,13 @@ def serializar_tecnico_publico(db: Session, tecnico: Tecnico):
     ).all()
 
     reputacion = obtener_reputacion_tecnico(db, tecnico.usuario_rut)
+    resenas = db.query(Resena).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == tecnico.usuario_rut,
+        Resena.resena_activa == "S"
+    ).all()
 
     return {
         "usuario_rut": tecnico.usuario_rut,
@@ -114,6 +122,7 @@ def serializar_tecnico_publico(db: Session, tecnico: Tecnico):
         "telefono": usuario.telefono if usuario else None,
         "promedio_calificacion": reputacion["promedio_calificacion"],
         "total_resenas": reputacion["total_resenas"],
+        "resumen_reputacion": generar_resumen_reputacion(resenas),
         "servicios": [servicio.nombre_servicio for servicio in servicios],
         "comunas": [comuna.nombre_comuna for comuna in comunas]
     }
