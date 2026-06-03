@@ -8,7 +8,9 @@ from sqlalchemy import desc
 from app.models.tecnico import Tecnico
 from app.models.tecnico_comuna import TecnicoComuna
 from app.models.comuna import Comuna
+from app.models.servicio import Servicio
 from app.models.tecnico_servicio import TecnicoServicio
+from app.models.usuario import Usuario
 
 from app.database import get_db
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate, TecnicoResponse
@@ -53,6 +55,110 @@ def buscar_tecnicos_por_servicio_comuna(
     ).all()
 
     return tecnicos
+
+
+def obtener_reputacion_tecnico(db: Session, rut: str):
+    promedio = db.query(
+        func.avg(Resena.calificacion)
+    ).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Resena.resena_activa == "S"
+    ).scalar()
+
+    total = db.query(Resena).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Solicitud.tecnico_usuario_rut == rut,
+        Resena.resena_activa == "S"
+    ).count()
+
+    return {
+        "promedio_calificacion": round(float(promedio), 1) if promedio else 0,
+        "total_resenas": total
+    }
+
+
+def serializar_tecnico_publico(db: Session, tecnico: Tecnico):
+    usuario = db.query(Usuario).filter(
+        Usuario.rut == tecnico.usuario_rut
+    ).first()
+
+    servicios = db.query(Servicio.nombre_servicio).join(
+        TecnicoServicio,
+        Servicio.id_servicio == TecnicoServicio.servicio_id_servicio
+    ).filter(
+        TecnicoServicio.tecnico_usuario_rut == tecnico.usuario_rut
+    ).all()
+
+    comunas = db.query(Comuna.nombre_comuna).join(
+        TecnicoComuna,
+        Comuna.id_comuna == TecnicoComuna.comuna_id_comuna
+    ).filter(
+        TecnicoComuna.tecnico_usuario_rut == tecnico.usuario_rut
+    ).all()
+
+    reputacion = obtener_reputacion_tecnico(db, tecnico.usuario_rut)
+
+    return {
+        "usuario_rut": tecnico.usuario_rut,
+        "descripcion_perfil": tecnico.descripcion_perfil,
+        "experiencia_anios": tecnico.experiencia_anios,
+        "nivel_tecnico": tecnico.nivel_tecnico,
+        "tecnico_verificado": tecnico.tecnico_verificado,
+        "nombre_completo": usuario.nombre_completo if usuario else "Tecnico FixYa",
+        "correo": usuario.correo if usuario else None,
+        "telefono": usuario.telefono if usuario else None,
+        "promedio_calificacion": reputacion["promedio_calificacion"],
+        "total_resenas": reputacion["total_resenas"],
+        "servicios": [servicio.nombre_servicio for servicio in servicios],
+        "comunas": [comuna.nombre_comuna for comuna in comunas]
+    }
+
+
+@router.get("/top-rating")
+def obtener_top_tecnicos(
+    db: Session = Depends(get_db)
+):
+    resultados = db.query(
+        Solicitud.tecnico_usuario_rut,
+        func.avg(Resena.calificacion).label("promedio"),
+        func.count(Resena.id_resena).label("total_resenas")
+    ).join(
+        Solicitud,
+        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).filter(
+        Resena.resena_activa == "S"
+    ).group_by(
+        Solicitud.tecnico_usuario_rut
+    ).order_by(
+        desc("promedio")
+    ).limit(10).all()
+
+    return [
+        {
+            "tecnico_usuario_rut": r.tecnico_usuario_rut,
+            "promedio_calificacion": round(float(r.promedio), 1),
+            "total_resenas": r.total_resenas
+        }
+        for r in resultados
+    ]
+
+
+@router.get("/publicos/perfiles")
+def listar_perfiles_publicos_tecnicos(db: Session = Depends(get_db)):
+    tecnicos = db.query(Tecnico).filter(
+        Tecnico.tecnico_verificado == True
+    ).all()
+
+    return [
+        serializar_tecnico_publico(db, tecnico)
+        for tecnico in tecnicos
+    ]
+
 
 @router.get("/{rut}", response_model=TecnicoResponse)
 def obtener_tecnico(rut: str, db: Session = Depends(get_db)):
@@ -110,34 +216,6 @@ def obtener_rating_tecnico(
         "promedio_calificacion": round(float(promedio), 1) if promedio else 0,
         "total_resenas": total
     }
-    
-@router.get("/top-rating")
-def obtener_top_tecnicos(
-    db: Session = Depends(get_db)
-):
-    resultados = db.query(
-        Solicitud.tecnico_usuario_rut,
-        func.avg(Resena.calificacion).label("promedio"),
-        func.count(Resena.id_resena).label("total_resenas")
-    ).join(
-        Solicitud,
-        Solicitud.id_solicitud == Resena.solicitud_id_solicitud
-    ).filter(
-        Resena.resena_activa == "S"
-    ).group_by(
-        Solicitud.tecnico_usuario_rut
-    ).order_by(
-        desc("promedio")
-    ).limit(10).all()
-
-    return [
-        {
-            "tecnico_usuario_rut": r.tecnico_usuario_rut,
-            "promedio_calificacion": round(float(r.promedio), 1),
-            "total_resenas": r.total_resenas
-        }
-        for r in resultados
-    ]
 @router.get("/{rut}/perfil")
 def obtener_perfil_tecnico(
     rut: str,
