@@ -17,7 +17,7 @@ INSERT INTO servicio (
   id_servicio,
   nombre_servicio,
   descripcion_servicio,
-  servicio_activo
+  estado_servicio
 )
 VALUES
 (1, 'Electricidad', 'Servicios eléctricos', true),
