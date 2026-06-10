@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, solo_admin
 from app.models.usuario import Usuario
 from app.security import hash_password, verify_password
 from app.auth import crear_token
@@ -46,7 +46,7 @@ class UsuarioOut(BaseModel):
 @router.get("/", response_model=list[UsuarioOut])
 def listar_usuarios(
     db: Session = Depends(get_db),
-    usuario=Depends(get_current_user)
+    usuario=Depends(solo_admin)
 ):
     return db.query(Usuario).all()
 

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
+from app.dependencies import solo_tecnico
 from app.schemas.cotizacion_schema import CotizacionCreate, CotizacionUpdate, CotizacionResponse
 from app.services import cotizacion_service
 
@@ -12,9 +13,15 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=CotizacionResponse)
-def crear_cotizacion(cotizacion: CotizacionCreate, db: Session = Depends(get_db)):
+def crear_cotizacion(
+    cotizacion: CotizacionCreate,
+    db: Session = Depends(get_db),
+    usuario=Depends(solo_tecnico)
+):
     try:
         return cotizacion_service.crear_cotizacion(db, cotizacion)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
