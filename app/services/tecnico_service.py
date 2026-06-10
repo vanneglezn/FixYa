@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from app.models.tecnico import Tecnico
 from app.models.tecnico_servicio import TecnicoServicio
 from app.models.tecnico_comuna import TecnicoComuna
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate
+from app.models.servicio import Servicio
 
 def crear_tecnico(db: Session, tecnico_data: TecnicoCreate):
     tecnico_existente = db.query(Tecnico).filter(
@@ -11,6 +13,17 @@ def crear_tecnico(db: Session, tecnico_data: TecnicoCreate):
 
     if tecnico_existente:
         return None
+    
+    for servicio_id in tecnico_data.servicios:
+        servicio_existente = db.query(Servicio).filter(
+            Servicio.id_servicio == servicio_id
+        ).first()
+
+        if not servicio_existente:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Servicio no encontrado: {servicio_id}"
+                )
 
     nuevo_tecnico = Tecnico(
         usuario_rut=tecnico_data.usuario_rut,
