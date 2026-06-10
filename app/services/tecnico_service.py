@@ -5,6 +5,7 @@ from app.models.tecnico_servicio import TecnicoServicio
 from app.models.tecnico_comuna import TecnicoComuna
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate
 from app.models.servicio import Servicio
+from app.models.comuna import Comuna
 
 def crear_tecnico(db: Session, tecnico_data: TecnicoCreate):
     tecnico_existente = db.query(Tecnico).filter(
@@ -44,11 +45,20 @@ def crear_tecnico(db: Session, tecnico_data: TecnicoCreate):
         ))
 
     for comuna_id in tecnico_data.comunas:
+        comuna_existente = db.query(Comuna).filter(
+            Comuna.id_comuna == comuna_id
+        ).first()
+
+        if not comuna_existente:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Comuna no encontrada: {comuna_id}"
+            )
+
         db.add(TecnicoComuna(
             tecnico_usuario_rut=tecnico_data.usuario_rut,
             comuna_id_comuna=comuna_id
         ))
-
     db.commit()
 
     return nuevo_tecnico
