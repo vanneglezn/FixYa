@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Literal
 
 class TecnicoCreate(BaseModel):
@@ -8,6 +8,14 @@ class TecnicoCreate(BaseModel):
     nivel_tecnico: Literal['Basico','Intermedio','Avanzado']
     servicios: List[int]
     comunas: List[int]
+
+    @field_validator("servicios")
+    @classmethod
+    def validar_servicios_sin_duplicados(cls,servicios):
+        if len(servicios) != len(set(servicios)):
+            raise ValueError("No se pertimen servicios duplicados")
+        
+        return servicios
 
 class TecnicoUpdate(BaseModel):
     descripcion_perfil: Optional[str] = None
