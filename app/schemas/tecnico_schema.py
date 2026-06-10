@@ -16,6 +16,13 @@ class TecnicoCreate(BaseModel):
             raise ValueError("No se pertimen servicios duplicados")
         
         return servicios
+    
+    @field_validator("comunas")
+    @classmethod
+    def validar_comunas_sin_duplicados(cls, comunas):
+        if len(comunas) != len(set(comunas)):
+            raise ValueError("No se permiten comunas duplicadas")
+        return comunas
 
 class TecnicoUpdate(BaseModel):
     descripcion_perfil: Optional[str] = None
